@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: hello-app
-          image: unknown
+          image: ghcr.io/volodymyr-malishevskyi/hello-app:sha-5ffe5f3
           imagePullPolicy: Always
           ports:
             - containerPort: 3000
