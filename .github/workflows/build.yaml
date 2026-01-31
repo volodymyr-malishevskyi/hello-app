@@ -3,6 +3,8 @@ name: Build and Push to GHCR
 on:
   push:
     branches: ["main"]
+    paths-ignore:
+      - "k8s/**"
   pull_request:
     branches: ["main"]
 
@@ -14,7 +16,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
       packages: write
 
     steps:
@@ -50,3 +52,24 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Update Kubernetes resources
+        if: github.event_name != 'pull_request'
+        run: |
+          git config user.name "GitHub Actions Bot"
+          git config user.email "<>"
+
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+          NEW_IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:sha-${SHORT_SHA}"
+
+          echo "Updating image to: $NEW_IMAGE"
+
+          sed -i "s|image: .*|image: $NEW_IMAGE|" k8s/deploy.yaml
+
+          if [[ -n $(git status -s) ]]; then
+            git add k8s/deploy.yaml
+            git commit -m "Update k8s image tag to sha-${SHORT_SHA}"
+            git push
+          else
+            echo "No changes to commit"
+          fi
